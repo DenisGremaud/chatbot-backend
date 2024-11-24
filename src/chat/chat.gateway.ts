@@ -47,21 +47,16 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody('input') input: any,
   ) {
-    console.log('Received input:', input);
     if (!input) {
       client.emit('error', { message: 'Input is required' });
       return;
     }
 
-    client.emit('response', `Received input: ${input}`);
-
     if (this.useStream) {
       client.emit('response_start', true);
-      const stream = await this.chatService.streamQuery(input);
 
-      for await (const chunk of stream) {
-        console.log('Emitting chunk:', chunk);
-        client.emit('response', chunk); // Emit each chunk to the client
+      for await (const chunk of await this.chatService.streamQuery(input)) {
+        client.emit('response', chunk);
       }
 
       client.emit('response_end', true);

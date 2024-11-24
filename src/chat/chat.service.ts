@@ -60,23 +60,21 @@ export class ChatService {
   }
 
   // Stream responses for an input query
-  async streamQuery(input: string): Promise<AsyncGenerator<string>> {
-    const stream = await this.executor.stream({ input });
-
-    // Map the stream to output chunks as strings
-    async function* outputStream() {
-      for await (const chunk of stream) {
-        if (chunk.output) {
-          yield chunk.output; // Send the agent's final output
-        } else if (chunk.messageLog) {
-          const logContent = chunk.messageLog
-            .map((msg) => msg.content)
-            .join(' ');
-          yield logContent; // Send intermediate logs
+  async *streamQuery(input: string): AsyncGenerator<string> {
+    const eventStream = await this.executor.streamEvents(
+      {
+        input: input,
+      },
+      { version: 'v2' },
+    );
+    for await (const event of eventStream) {
+      const streamEvent = event.event;
+      if (streamEvent === 'on_chat_model_stream') {
+        const content = event.data.chunk.content;
+        if (content) {
+          yield content;
         }
       }
     }
-
-    return outputStream();
   }
 }
