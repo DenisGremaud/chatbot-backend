@@ -12,20 +12,17 @@ export class ChatService {
   private executor: AgentExecutor;
 
   constructor() {
-    this.initializeLLM();
     this.initializeAgent();
   }
 
-  private async initializeLLM() {
+  private async initializeAgent() {
     this.llm = new ChatOpenAI({
       model: 'gpt-4o',
       openAIApiKey: process.env.OPENAI_API_KEY,
-      temperature: 0.7,
+      temperature: 0.5,
       streaming: true,
     });
-  }
 
-  private async initializeAgent() {
     // Define a simple placeholder tool
     const placeholderTool = new DynamicTool({
       name: 'placeholder_tool',
@@ -55,26 +52,32 @@ export class ChatService {
   }
 
   async query(input: string): Promise<string> {
-    const result = await this.executor.invoke({ input });
-    return result.output;
+    try {
+      const result = await this.executor.invoke({ input });
+      return result.output;
+    } catch (error) {
+      console.error('Error during query:', error);
+      throw new Error('Query failed. Please try again.');
+    }
   }
 
-  // Stream responses for an input query
   async *streamQuery(input: string): AsyncGenerator<string> {
-    const eventStream = await this.executor.streamEvents(
-      {
-        input: input,
-      },
-      { version: 'v2' },
-    );
-    for await (const event of eventStream) {
-      const streamEvent = event.event;
-      if (streamEvent === 'on_chat_model_stream') {
-        const content = event.data.chunk.content;
-        if (content) {
-          yield content;
+    try {
+      const eventStream = await this.executor.streamEvents(
+        { input: input },
+        { version: 'v2' },
+      );
+      for await (const event of eventStream) {
+        if (event.event === 'on_chat_model_stream') {
+          const content = event.data.chunk.content;
+          if (content) {
+            yield content;
+          }
         }
       }
+    } catch (error) {
+      console.error('Error during stream query:', error);
+      yield 'Streaming query failed. Please try again.';
     }
   }
 }
