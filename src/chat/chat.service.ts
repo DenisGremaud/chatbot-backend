@@ -5,24 +5,26 @@ import { AgentExecutor } from 'langchain/agents';
 import { pull } from 'langchain/hub';
 import type { ChatPromptTemplate } from '@langchain/core/prompts';
 import { DynamicTool } from '@langchain/core/tools';
+import { RunnableWithMessageHistory } from '@langchain/core/runnables';
+import { SessionManagerService } from 'src/session/session-manager/session-manager.service';
 
 @Injectable()
 export class ChatService {
   private llm: ChatOpenAI;
   private executor: AgentExecutor;
+  private agent_with_chat_history: any;
 
-  constructor() {
-    this.initializeAgent();
-  }
-
-  private async initializeAgent() {
+  constructor(private readonly sessionManager: SessionManagerService) {
     this.llm = new ChatOpenAI({
       model: 'gpt-4o',
       openAIApiKey: process.env.OPENAI_API_KEY,
       temperature: 0.5,
       streaming: true,
     });
+    this.initializeAgent();
+  }
 
+  private async initializeAgent() {
     // Define a simple placeholder tool
     const placeholderTool = new DynamicTool({
       name: 'placeholder_tool',
@@ -49,11 +51,31 @@ export class ChatService {
       agent,
       tools: [placeholderTool],
     });
+
+    this.agent_with_chat_history = new RunnableWithMessageHistory({
+      runnable: this.executor,
+      getMessageHistory: (sessionId) =>
+        this.sessionManager.getSessionHistory(sessionId),
+      inputMessagesKey: 'input',
+      historyMessagesKey: 'chat_history',
+    });
   }
 
-  async query(input: string): Promise<string> {
+  async query(input: string, sessionId: string): Promise<string> {
     try {
-      const result = await this.executor.invoke({ input });
+      const result = await this.agent_with_chat_history.invoke(
+        {
+          input,
+        },
+        {
+          configurable: {
+            sessionId: sessionId,
+          },
+          metadata: {
+            session_id: sessionId,
+          },
+        },
+      );
       return result.output;
     } catch (error) {
       console.error('Error during query:', error);
@@ -61,10 +83,20 @@ export class ChatService {
     }
   }
 
-  async *streamQuery(input: string): AsyncGenerator<string> {
+  async *streamQuery(input: string, sessionId: string): AsyncGenerator<string> {
     try {
-      const eventStream = await this.executor.streamEvents(
-        { input: input },
+      const eventStream = await this.agent_with_chat_history.streamEvents(
+        {
+          input: input,
+        },
+        {
+          configurable: {
+            sessionId: sessionId,
+          },
+          metadata: {
+            session_id: sessionId,
+          },
+        },
         { version: 'v2' },
       );
       for await (const event of eventStream) {

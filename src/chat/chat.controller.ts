@@ -8,8 +8,9 @@ export class ChatController {
   @Post('query')
   async query(
     @Body('question') question: string,
+    @Body('sessionId') sessionId: string,
   ): Promise<{ response: string }> {
-    const response = await this.chatService.query(question);
+    const response = await this.chatService.query(question, sessionId);
     return { response };
   }
 }
