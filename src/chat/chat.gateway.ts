@@ -107,7 +107,6 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { sessionId: string },
   ) {
-    console.log('Restoring session:', data);
     const { sessionId } = data;
 
     if (!sessionId) {

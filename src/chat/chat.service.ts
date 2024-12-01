@@ -87,10 +87,17 @@ export class ChatService {
     try {
       const eventStream = await this.agent_with_chat_history.streamEvents(
         {
-          input: input,
+          input,
         },
-        { version: 'v2' },
-        { configurable: { sessionId: sessionId } },
+        {
+          version: 'v2',
+          configurable: {
+            sessionId: sessionId,
+          },
+          metadata: {
+            session_id: sessionId,
+          },
+        },
       );
       for await (const event of eventStream) {
         if (event.event === 'on_chat_model_stream') {
