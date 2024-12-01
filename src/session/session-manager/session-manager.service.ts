@@ -73,6 +73,10 @@ export class SessionManagerService {
     this.sidToSession.set(sid, sessionId);
   }
 
+  removeSidToSession(sid: string): void {
+    this.sidToSession.delete(sid);
+  }
+
   // Serialize a message for consistent structure
   private serializeMessage(
     message: AIMessage | HumanMessage,

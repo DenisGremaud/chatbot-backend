@@ -11,7 +11,7 @@ export class SessionManagerController {
     return { sessionId };
   }
 
-  @Get(':sessionId/history')
+  @Get('history/:sessionId')
   async getSessionHistory(@Param('sessionId') sessionId: string) {
     const history =
       await this.sessionManagerService.getSessionMessages(sessionId);

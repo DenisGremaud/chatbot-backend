@@ -16,7 +16,7 @@ export class ChatService {
 
   constructor(private readonly sessionManager: SessionManagerService) {
     this.llm = new ChatOpenAI({
-      model: 'gpt-4o',
+      model: process.env.OPENAI_MODEL,
       openAIApiKey: process.env.OPENAI_API_KEY,
       temperature: 0.5,
       streaming: true,
@@ -89,15 +89,8 @@ export class ChatService {
         {
           input: input,
         },
-        {
-          configurable: {
-            sessionId: sessionId,
-          },
-          metadata: {
-            session_id: sessionId,
-          },
-        },
         { version: 'v2' },
+        { configurable: { sessionId: sessionId } },
       );
       for await (const event of eventStream) {
         if (event.event === 'on_chat_model_stream') {

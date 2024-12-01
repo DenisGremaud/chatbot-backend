@@ -12,10 +12,14 @@ import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { SessionManagerService } from '../session/session-manager/session-manager.service';
+import { UserService } from 'src/user/user.service';
 
-@WebSocketGateway({
+@WebSocketGateway(8003, {
   cors: {
-    origin: '*', // Update this with your client origin
+    origin: ['*'],
+    credentials: false,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    transports: ['websocket'],
   },
 })
 @Injectable()
@@ -29,6 +33,7 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly sessionManager: SessionManagerService,
+    private readonly userService: UserService,
   ) {
     this.useStream = process.env.USE_STREAM === 'true';
     console.log(`Using stream: ${this.useStream}`);
@@ -40,6 +45,7 @@ export class ChatGateway
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
+    client.emit('welcome', { message: 'Welcome to the WebSocket server!' });
   }
 
   async handleDisconnect(client: Socket) {
@@ -54,7 +60,7 @@ export class ChatGateway
         );
         // Add logic here to persist chat history if needed.
       }
-      this.sessionManager.deleteSession(sessionId);
+      this.sessionManager.removeSidToSession(client.id);
     }
   }
 
@@ -101,6 +107,7 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { sessionId: string },
   ) {
+    console.log('Restoring session:', data);
     const { sessionId } = data;
 
     if (!sessionId) {
@@ -110,7 +117,8 @@ export class ChatGateway
 
     try {
       if (this.sessionManager.testIsSessionId(sessionId)) {
-        const messages = this.sessionManager.getSessionMessages(sessionId);
+        const messages =
+          await this.sessionManager.getSessionMessages(sessionId);
         this.sessionManager.mapSidToSession(client.id, sessionId);
         client.emit('session_restored', { sessionId, chatHistory: messages });
       } else {
@@ -138,6 +146,7 @@ export class ChatGateway
 
     try {
       const sessionId = this.sessionManager.createSession(client.id);
+      this.userService.addSession(userUuid, sessionId);
       client.emit('session_init', {
         sessionId,
         initialMessage: this.sessionManager.initialMessage,
