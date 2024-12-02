@@ -14,7 +14,7 @@ import { ChatService } from './chat.service';
 import { SessionManagerService } from '../session/session-manager/session-manager.service';
 import { UserService } from 'src/user/user.service';
 
-@WebSocketGateway(8003, {
+@WebSocketGateway({
   cors: {
     origin: ['*'],
     credentials: false,
