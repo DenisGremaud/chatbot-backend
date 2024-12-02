@@ -1,53 +1,70 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class UserService {
-  // Array to store user UUIDs and their sessions
-  private users: Map<string, string[]> = new Map();
+  constructor(private readonly prisma: PrismaService) {}
 
-  // Create a new user and initialize their session array
-  createUser(): { user_uuid: string } {
-    const user_uuid = uuidv4();
-    this.users.set(user_uuid, []);
-    return { user_uuid };
+  // Create a new user
+  async createUser(): Promise<{ user_uuid: string }> {
+    const user = await this.prisma.user.create({
+      data: { uuid: uuidv4() },
+    });
+    return { user_uuid: user.uuid };
   }
 
-  // Add a session ID to a user
-  addSession(
-    user_uuid: string,
-    session_id: string,
-  ): string | { error: string } {
-    const user = this.users.get(user_uuid);
+  // Add a session for a user
+  async addSession(
+    userUuid: string,
+    sessionId: string,
+  ): Promise<string | { error: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { uuid: userUuid },
+    });
 
     if (!user) {
       return { error: 'User not found' };
     }
 
-    user.push(session_id);
-    return session_id;
+    await this.prisma.session.create({
+      data: { userUuid, sessionId },
+    });
+
+    return sessionId;
   }
 
-  // Get all session IDs for a user
-  getSessions(user_uuid: string): string[] | { error: string } {
-    const sessions = this.users.get(user_uuid);
+  // Get all sessions for a user
+  async getSessions(userUuid: string): Promise<string[] | { error: string }> {
+    const sessions = await this.prisma.session.findMany({
+      where: { userUuid },
+      select: { sessionId: true },
+    });
 
-    if (!sessions) {
-      return { error: 'User not found or no sessions available' };
+    if (!sessions.length) {
+      return { error: 'No sessions found for the user.' };
     }
 
-    return sessions;
+    return sessions.map((session) => session.sessionId);
   }
 
-  userExists(user_uuid: string): boolean {
-    return this.users.has(user_uuid);
+  // Check if a user exists
+  async userExists(userUuid: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { uuid: userUuid },
+    });
+    return !!user;
   }
 
   // Get all users and their sessions
-  getAllUsers(): { user_uuid: string; session_ids: string[] }[] {
-    return Array.from(this.users).map(([user_uuid, session_ids]) => ({
-      user_uuid,
-      session_ids: session_ids.slice(),
+  async getAllUsers(): Promise<{ user_uuid: string; session_ids: string[] }[]> {
+    const users = await this.prisma.user.findMany({
+      include: { sessions: true },
+    });
+
+    return users.map((user) => ({
+      user_uuid: user.uuid,
+      session_ids: user.sessions.map((session) => session.sessionId),
     }));
   }
 }

@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Add your database URL in the `.env` file
+}
+
+model Collection {
+  id              Int      @id @default(autoincrement())
+  collectionName  String   @unique @db.VarChar(255)
+  description     String   @db.VarChar(500)
+  host            String   @db.VarChar(255)
+  port            Int
+  searchK         Int
+  hashCollection  String   @db.VarChar(255)
+  lastUpdate      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([collectionName]) // Adds an index to collectionName for faster lookups
+}
+
+model User {
+  uuid            String         @id @db.VarChar(255)
+  sessions        Session[]      // One-to-many relationship with sessions
+}
+
+model Session {
+  userUuid        String         @db.VarChar(255)
+  sessionId       String         @db.VarChar(255)
+  creationDate    DateTime       @default(now()) @db.Timestamp(6)
+  user            User           @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([userUuid, sessionId])    // Composite primary key
+  @@index([userUuid])            // Index for faster lookups by userUuid
+}

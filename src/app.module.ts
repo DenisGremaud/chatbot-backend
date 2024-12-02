@@ -5,9 +5,16 @@ import { ChatModule } from './chat/chat.module';
 import { ConfigModule } from '@nestjs/config';
 import { SessionModule } from './session/session.module';
 import { UserModule } from './user/user.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), ChatModule, SessionModule, UserModule],
+  imports: [
+    ConfigModule.forRoot(),
+    ChatModule,
+    SessionModule,
+    UserModule,
+    PrismaModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

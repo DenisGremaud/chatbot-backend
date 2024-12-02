@@ -14,19 +14,19 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('create')
-  createUser() {
+  async createUser() {
     return this.userService.createUser();
   }
 
   @Post('add-session')
-  addSession(@Body() body: { user_uuid: string; session_id: string }) {
-    const { user_uuid, session_id } = body;
-    return this.userService.addSession(user_uuid, session_id);
+  async addSession(@Body() body: { userUuid: string; sessionId: string }) {
+    const { userUuid, sessionId } = body;
+    return this.userService.addSession(userUuid, sessionId);
   }
 
-  @Get('sessions/:user_uuid')
-  getSessions(@Param('user_uuid') user_uuid: string) {
-    const result = this.userService.getSessions(user_uuid);
+  @Get('sessions/:userUuid')
+  async getSessions(@Param('userUuid') userUuid: string) {
+    const result = await this.userService.getSessions(userUuid);
 
     if ('error' in result) {
       throw new HttpException(result.error, HttpStatus.NOT_FOUND);
@@ -36,12 +36,12 @@ export class UserController {
   }
 
   @Get('all-users')
-  getAllUsers() {
+  async getAllUsers() {
     return this.userService.getAllUsers();
   }
 
-  @Get('exists/:user_uuid')
-  userExists(@Param('user_uuid') user_uuid: string) {
-    return this.userService.userExists(user_uuid);
+  @Get('exists/:userUuid')
+  async userExists(@Param('userUuid') userUuid: string) {
+    return this.userService.userExists(userUuid);
   }
 }
