@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ChatMessageHistory } from 'langchain/stores/message/in_memory';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class SessionManagerService {
@@ -16,7 +17,7 @@ export class SessionManagerService {
 
   // Generate a unique session ID
   private generateSessionId(): string {
-    return crypto.randomUUID();
+    return uuidv4();
   }
 
   // Create a new session and return the session ID
