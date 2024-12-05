@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChatMessageHistory } from 'langchain/stores/message/in_memory';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class SessionManagerService {
@@ -9,7 +10,7 @@ export class SessionManagerService {
   private sidToSession: Map<string, string>;
   public readonly initialMessage: string;
 
-  constructor() {
+  constructor(private readonly prismaService: PrismaService) {
     this.initialMessage = process.env.INITIAL_MESSAGE ?? 'Helllooo!';
     this.sessions = new Map();
     this.sidToSession = new Map();
@@ -21,9 +22,12 @@ export class SessionManagerService {
   }
 
   // Create a new session and return the session ID
-  createSession(sid: string): string {
+  createSession(sid: string, userUuid: string): string {
     const sessionId = this.generateSessionId();
     this.sidToSession.set(sid, sessionId);
+    this.prismaService.session.create({
+      data: { userUuid, sessionId },
+    });
     this.sessions.set(sessionId, new ChatMessageHistory());
     this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
     return sessionId;

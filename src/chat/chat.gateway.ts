@@ -12,7 +12,6 @@ import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { SessionManagerService } from '../session/session-manager/session-manager.service';
-import { UserService } from 'src/user/user.service';
 
 @WebSocketGateway({
   cors: {
@@ -33,7 +32,6 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly sessionManager: SessionManagerService,
-    private readonly userService: UserService,
   ) {
     this.useStream = process.env.USE_STREAM === 'true';
     console.log(`Using stream: ${this.useStream}`);
@@ -105,7 +103,7 @@ export class ChatGateway
   @SubscribeMessage('restore_session')
   async handleRestoreSession(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { sessionId: string },
+    @MessageBody() data: { sessionId: string; userUuid: string },
   ) {
     const { sessionId } = data;
 
@@ -121,7 +119,10 @@ export class ChatGateway
         this.sessionManager.mapSidToSession(client.id, sessionId);
         client.emit('session_restored', { sessionId, chatHistory: messages });
       } else {
-        const newSessionId = this.sessionManager.createSession(client.id);
+        const newSessionId = this.sessionManager.createSession(
+          client.id,
+          data.userUuid,
+        );
         client.emit('session_init', {
           sessionId: newSessionId,
           initialMessage: this.sessionManager.initialMessage,
@@ -144,8 +145,7 @@ export class ChatGateway
     }
 
     try {
-      const sessionId = this.sessionManager.createSession(client.id);
-      this.userService.addSession(userUuid, sessionId);
+      const sessionId = this.sessionManager.createSession(client.id, userUuid);
       client.emit('session_init', {
         sessionId,
         initialMessage: this.sessionManager.initialMessage,
