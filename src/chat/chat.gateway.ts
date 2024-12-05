@@ -119,7 +119,7 @@ export class ChatGateway
         this.sessionManager.mapSidToSession(client.id, sessionId);
         client.emit('session_restored', { sessionId, chatHistory: messages });
       } else {
-        const newSessionId = this.sessionManager.createSession(
+        const newSessionId = await this.sessionManager.createSession(
           client.id,
           data.userUuid,
         );

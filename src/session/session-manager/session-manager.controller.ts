@@ -6,8 +6,14 @@ export class SessionManagerController {
   constructor(private readonly sessionManagerService: SessionManagerService) {}
 
   @Post('create')
-  createSession(@Body('sid') sid: string, @Body('userUuid') userUuid: string) {
-    const sessionId = this.sessionManagerService.createSession(sid, userUuid);
+  async createSession(
+    @Body('sid') sid: string,
+    @Body('userUuid') userUuid: string,
+  ): Promise<{ sessionId: string }> {
+    const sessionId = await this.sessionManagerService.createSession(
+      sid,
+      userUuid,
+    );
     return { sessionId };
   }
 
