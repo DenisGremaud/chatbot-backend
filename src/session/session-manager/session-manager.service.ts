@@ -24,12 +24,19 @@ export class SessionManagerService {
   // Create a new session and return the session ID
   createSession(sid: string, userUuid: string): string {
     const sessionId = this.generateSessionId();
-    this.sidToSession.set(sid, sessionId);
-    this.prismaService.session.create({
-      data: { userUuid, sessionId },
-    });
-    this.sessions.set(sessionId, new ChatMessageHistory());
-    this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
+    this.prismaService.session
+      .create({
+        data: { userUuid, sessionId },
+      })
+      .then(() => {
+        console.log('Session created');
+        this.sidToSession.set(sid, sessionId);
+        this.sessions.set(sessionId, new ChatMessageHistory());
+        this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
+      })
+      .catch((error) => {
+        console.error('Error creating session:', error);
+      });
     return sessionId;
   }
 
