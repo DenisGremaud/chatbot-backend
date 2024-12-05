@@ -105,7 +105,7 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { sessionId: string; userUuid: string },
   ) {
-    const { sessionId } = data;
+    const { sessionId, userUuid } = data;
 
     if (!sessionId) {
       client.emit('error', { message: 'Session ID is required.' });
@@ -113,7 +113,7 @@ export class ChatGateway
     }
 
     try {
-      if (this.sessionManager.testIsSessionId(sessionId)) {
+      if (await this.sessionManager.testIsSessionId(userUuid, sessionId)) {
         const messages =
           await this.sessionManager.getSessionMessages(sessionId);
         this.sessionManager.mapSidToSession(client.id, sessionId);

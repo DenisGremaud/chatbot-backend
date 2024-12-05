@@ -4,33 +4,39 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // Add your database URL in the `.env` file
+  url      = env("DATABASE_URL")
 }
 
 model Collection {
-  id              Int      @id @default(autoincrement())
-  collectionName  String   @unique @db.VarChar(255)
-  description     String   @db.VarChar(500)
-  host            String   @db.VarChar(255)
-  port            Int
-  searchK         Int
-  hashCollection  String   @db.VarChar(255)
-  lastUpdate      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  id             Int      @id @default(autoincrement())
+  collectionName String   @unique @db.VarChar(255)
+  description    String   @db.VarChar(500)
+  host           String   @db.VarChar(255)
+  port           Int
+  searchK        Int
+  hashCollection String   @db.VarChar(255)
+  lastUpdate     DateTime @default(now()) @updatedAt @db.Timestamp(6)
 
-  @@index([collectionName]) // Adds an index to collectionName for faster lookups
+  @@index([collectionName])
 }
 
 model User {
-  uuid            String         @id @db.VarChar(255)
-  sessions        Session[]      // One-to-many relationship with sessions
+  uuid     String    @id @db.VarChar(255)
+  sessions Session[]
 }
 
 model Session {
-  userUuid        String         @db.VarChar(255)
-  sessionId       String         @db.VarChar(255)
-  creationDate    DateTime       @default(now()) @db.Timestamp(6)
-  user            User           @relation(fields: [userUuid], references: [uuid], onDelete: Cascade, onUpdate: Cascade)
+  userUuid     String   @db.VarChar(255)
+  sessionId    String   @db.VarChar(255)
+  creationDate DateTime @default(now()) @db.Timestamp(6)
+  user         User     @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
 
-  @@id([userUuid, sessionId])    // Composite primary key
-  @@index([userUuid])            // Index for faster lookups by userUuid
+  @@id([userUuid, sessionId])
+  @@index([userUuid])
+}
+
+model langchain_chat_histories {
+  id         Int    @id @default(autoincrement())
+  session_id String @db.VarChar(255)
+  message    Json
 }

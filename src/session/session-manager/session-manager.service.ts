@@ -1,19 +1,42 @@
 import { Injectable } from '@nestjs/common';
-import { ChatMessageHistory } from 'langchain/stores/message/in_memory';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PostgresChatMessageHistory } from '@langchain/community/stores/message/postgres';
+import { Pool } from 'pg';
 
 @Injectable()
 export class SessionManagerService {
-  private sessions: Map<string, ChatMessageHistory>;
+  private sessions: Map<string, PostgresChatMessageHistory>;
   private sidToSession: Map<string, string>;
   public readonly initialMessage: string;
+  private posgresPool: Pool;
 
   constructor(private readonly prismaService: PrismaService) {
     this.initialMessage = process.env.INITIAL_MESSAGE ?? 'Helllooo!';
     this.sessions = new Map();
     this.sidToSession = new Map();
+    this.posgresPool = new Pool({
+      user: process.env.POSTGRES_USER,
+      host: process.env.POSTGRES_HOST,
+      database: process.env.POSTGRES_DB,
+      password: process.env.POSTGRES_PASSWORD,
+      port: parseInt(process.env.POSTGRES_PORT),
+    });
+  }
+
+  // Cleanup logic for application shutdown
+  async onApplicationShutdown(signal?: string): Promise<void> {
+    console.log(`Application is shutting down... Signal: ${signal}`);
+    try {
+      this.sessions.clear();
+      this.sidToSession.clear();
+      console.log('In-memory session data cleared.');
+      await this.posgresPool.end();
+      console.log('Postgres pool closed successfully.');
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+    }
   }
 
   // Generate a unique session ID
@@ -29,15 +52,23 @@ export class SessionManagerService {
     });
     console.log('Session created');
     this.sidToSession.set(sid, sessionId);
-    this.sessions.set(sessionId, new ChatMessageHistory());
+    this.sessions.set(
+      sessionId,
+      new PostgresChatMessageHistory({ sessionId, pool: this.posgresPool }),
+    );
     this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
     return ret.sessionId;
   }
 
   // Get the session's chat history
-  getSessionHistory(sessionId: string): ChatMessageHistory | undefined {
+  getSessionHistory(sessionId: string): PostgresChatMessageHistory | undefined {
+    if (!this.sessions.has(sessionId)) {
+      this.sessions.set(
+        sessionId,
+        new PostgresChatMessageHistory({ sessionId, pool: this.posgresPool }),
+      );
+    }
     const history = this.sessions.get(sessionId);
-    console.log(history);
     return history;
   }
 
@@ -71,8 +102,16 @@ export class SessionManagerService {
     return false;
   }
 
-  testIsSessionId(sessionId: string): boolean {
-    return this.sessions.has(sessionId);
+  async testIsSessionId(userUuid: string, sessionId: string): Promise<boolean> {
+    const session = await this.prismaService.session.findUnique({
+      where: {
+        userUuid_sessionId: {
+          userUuid,
+          sessionId,
+        },
+      },
+    });
+    return session !== null;
   }
 
   mapSidToSession(sid: string, sessionId: string): void {
