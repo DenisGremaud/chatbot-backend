@@ -25,9 +25,6 @@ export class SessionManagerService {
   createSession(sid: string, userUuid: string): string {
     const sessionId = this.generateSessionId();
     this.sidToSession.set(sid, sessionId);
-    this.prismaService.session.create({
-      data: { userUuid, sessionId },
-    });
     this.sessions.set(sessionId, new ChatMessageHistory());
     this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
     return sessionId;
