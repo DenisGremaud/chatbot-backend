@@ -44,8 +44,7 @@ export class UserService {
     if (!sessions.length) {
       return { error: 'No sessions found for the user.' };
     }
-    const session_ids = sessions.map((session) => session.sessionId);
-    console.log(session_ids);
+
     return sessions.map((session) => session.sessionId);
   }
 
