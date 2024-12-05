@@ -3,10 +3,10 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createOpenAIFunctionsAgent } from 'langchain/agents';
 import { AgentExecutor } from 'langchain/agents';
 import { pull } from 'langchain/hub';
-import type { ChatPromptTemplate } from '@langchain/core/prompts';
 import { DynamicTool } from '@langchain/core/tools';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { SessionManagerService } from 'src/session/session-manager/session-manager.service';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
 
 @Injectable()
 export class ChatService {
@@ -54,7 +54,7 @@ export class ChatService {
 
     this.agent_with_chat_history = new RunnableWithMessageHistory({
       runnable: this.executor,
-      getMessageHistory: (sessionId) =>
+      getMessageHistory: async (sessionId) =>
         this.sessionManager.getSessionHistory(sessionId),
       inputMessagesKey: 'input',
       historyMessagesKey: 'chat_history',
