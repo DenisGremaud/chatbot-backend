@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Collection {
+model collections {
   id             Int      @id @default(autoincrement())
   collectionName String   @unique @db.VarChar(255)
   description    String   @db.VarChar(500)
