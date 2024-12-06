@@ -49,15 +49,10 @@ export class ChatGateway
   async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
     const sessionId = this.sessionManager.getSessionIdFromSid(client.id);
+    console.log(`Session ID: ${sessionId}`);
 
     if (sessionId) {
-      const history = this.sessionManager.getSessionHistory(sessionId);
-      if (history) {
-        console.log(
-          `Session ${sessionId} disconnected. Saving session history.`,
-        );
-        // Add logic here to persist chat history if needed.
-      }
+      //this.sessionManager.saveSessionHistory(client.id);
       this.sessionManager.removeSidToSession(client.id);
     }
   }
@@ -78,7 +73,10 @@ export class ChatGateway
       return;
     }
 
+    await this.sessionManager.addMessageToPrisma(sessionId, input, 'human');
+
     try {
+      let response = '';
       client.emit('response_start', true);
 
       if (this.useStream) {
@@ -86,12 +84,16 @@ export class ChatGateway
           input,
           sessionId,
         )) {
+          response += chunk;
           client.emit('response', chunk);
         }
       } else {
         const result = await this.chatService.query(input, sessionId);
+        response = result;
         client.emit('response', result);
       }
+
+      await this.sessionManager.addMessageToPrisma(sessionId, response, 'ai');
 
       client.emit('response_end', true);
     } catch (error) {
@@ -114,6 +116,7 @@ export class ChatGateway
 
     try {
       if (await this.sessionManager.testIsSessionId(userUuid, sessionId)) {
+        await this.sessionManager.addSessionMessagesFromPrisma(sessionId);
         const messages =
           await this.sessionManager.getSessionMessages(sessionId);
         this.sessionManager.mapSidToSession(client.id, sessionId);

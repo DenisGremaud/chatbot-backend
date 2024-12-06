@@ -2,27 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PostgresChatMessageHistory } from '@langchain/community/stores/message/postgres';
-import { Pool } from 'pg';
-
+import { ChatMessageHistory } from 'langchain/stores/message/in_memory';
+import { BaseChatMessageHistory } from '@langchain/core/chat_history';
 @Injectable()
 export class SessionManagerService {
-  private sessions: Map<string, PostgresChatMessageHistory>;
+  private sessions: Map<string, ChatMessageHistory>;
   private sidToSession: Map<string, string>;
   public readonly initialMessage: string;
-  private posgresPool: Pool;
 
   constructor(private readonly prismaService: PrismaService) {
     this.initialMessage = process.env.INITIAL_MESSAGE ?? 'Helllooo!';
     this.sessions = new Map();
     this.sidToSession = new Map();
-    this.posgresPool = new Pool({
-      user: process.env.POSTGRES_USER,
-      host: process.env.POSTGRES_HOST,
-      database: process.env.POSTGRES_DB,
-      password: process.env.POSTGRES_PASSWORD,
-      port: parseInt(process.env.POSTGRES_PORT),
-    });
   }
 
   // Cleanup logic for application shutdown
@@ -32,8 +23,6 @@ export class SessionManagerService {
       this.sessions.clear();
       this.sidToSession.clear();
       console.log('In-memory session data cleared.');
-      await this.posgresPool.end();
-      console.log('Postgres pool closed successfully.');
     } catch (error) {
       console.error('Error during shutdown:', error);
     }
@@ -52,21 +41,16 @@ export class SessionManagerService {
     });
     console.log('Session created');
     this.sidToSession.set(sid, sessionId);
-    this.sessions.set(
-      sessionId,
-      new PostgresChatMessageHistory({ sessionId, pool: this.posgresPool }),
-    );
-    this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
+    this.sessions.set(sessionId, new ChatMessageHistory());
+    await this.sessions.get(sessionId)?.addAIMessage(this.initialMessage);
+    await this.addMessageToPrisma(sessionId, this.initialMessage, 'ai');
     return ret.sessionId;
   }
 
   // Get the session's chat history
-  getSessionHistory(sessionId: string): PostgresChatMessageHistory | undefined {
+  getSessionHistory(sessionId: string): BaseChatMessageHistory {
     if (!this.sessions.has(sessionId)) {
-      this.sessions.set(
-        sessionId,
-        new PostgresChatMessageHistory({ sessionId, pool: this.posgresPool }),
-      );
+      this.sessions.set(sessionId, new ChatMessageHistory());
     }
     const history = this.sessions.get(sessionId);
     return history;
@@ -78,18 +62,18 @@ export class SessionManagerService {
   }
 
   // Add a user's message to the session history
-  addUserMessage(sessionId: string, message: string): void {
+  async addUserMessage(sessionId: string, message: string): Promise<void> {
     const history = this.sessions.get(sessionId);
     if (history) {
-      history.addUserMessage(message);
+      await history.addUserMessage(message);
     }
   }
 
   // Add the AI's message to the session history
-  addAIMessage(sessionId: string, message: string): void {
+  async addAIMessage(sessionId: string, message: string): Promise<void> {
     const history = this.sessions.get(sessionId);
     if (history) {
-      history.addAIMessage(message);
+      await history.addAIMessage(message);
     }
   }
 
@@ -112,6 +96,67 @@ export class SessionManagerService {
       },
     });
     return session !== null;
+  }
+
+  async addSessionMessagesFromPrisma(
+    sessionId: string,
+  ): Promise<Record<string, string>[] | { error: string }> {
+    const messages = await this.prismaService.langchain_chat_histories.findMany(
+      {
+        where: {
+          session_id: sessionId,
+        },
+      },
+    );
+    if (messages.length === 0) {
+      return { error: 'Session not found.' };
+    }
+    const serializedMessages = messages.map((msg) =>
+      JSON.parse(msg.message.toString()),
+    );
+    const chat_history = new ChatMessageHistory();
+    serializedMessages.map((msg) => {
+      if (msg.type === 'ai') {
+        chat_history.addAIMessage(msg.content);
+      } else if (msg.type === 'human') {
+        chat_history.addUserMessage(msg.content);
+      } else {
+        throw new TypeError(`Unknown message type: ${msg.type}`);
+      }
+    });
+    this.sessions.set(sessionId, chat_history);
+  }
+
+  async addMessageToPrisma(
+    sessionId: string,
+    message: string,
+    type: string,
+  ): Promise<void> {
+    if (type === 'ai') {
+      const obj = {
+        type: 'ai',
+        content: message,
+      };
+      await this.prismaService.langchain_chat_histories.create({
+        data: {
+          session_id: sessionId,
+          message: JSON.stringify(obj),
+        },
+      });
+    } else if (type === 'human') {
+      const obj = {
+        type: 'human',
+        content: message,
+      };
+      await this.prismaService.langchain_chat_histories.create({
+        data: {
+          session_id: sessionId,
+          message: JSON.stringify(obj),
+        },
+      });
+    } else {
+      throw new TypeError(`Unknown message type: ${type}`);
+    }
   }
 
   mapSidToSession(sid: string, sessionId: string): void {
