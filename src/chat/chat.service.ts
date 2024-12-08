@@ -1,20 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
-import { createOpenAIFunctionsAgent } from 'langchain/agents';
-import { AgentExecutor } from 'langchain/agents';
-import { pull } from 'langchain/hub';
+import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
 import { DynamicTool } from '@langchain/core/tools';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { SessionManagerService } from 'src/session/session-manager/session-manager.service';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { RetriverService } from 'src/retriver/retriver.service';
 
 @Injectable()
 export class ChatService {
   private llm: ChatOpenAI;
   private executor: AgentExecutor;
   private agent_with_chat_history: any;
+  private system_message: string;
 
-  constructor(private readonly sessionManager: SessionManagerService) {
+  constructor(
+    private readonly sessionManager: SessionManagerService,
+    private readonly retriverService: RetriverService,
+  ) {
+    this.system_message = process.env.SYSTEM_MESSAGE ?? '';
     this.llm = new ChatOpenAI({
       model: process.env.OPENAI_MODEL,
       openAIApiKey: process.env.OPENAI_API_KEY,
@@ -25,6 +29,7 @@ export class ChatService {
   }
 
   private async initializeAgent() {
+    await this.retriverService._initializeRetrievers();
     // Define a simple placeholder tool
     const placeholderTool = new DynamicTool({
       name: 'placeholder_tool',
@@ -34,22 +39,27 @@ export class ChatService {
       },
     });
 
-    // Asynchronously pull the prompt
-    const prompts: ChatPromptTemplate = await pull<ChatPromptTemplate>(
-      'hwchase17/openai-functions-agent',
-    );
+    // chatbot prompt template
+    const prompts: ChatPromptTemplate = ChatPromptTemplate.fromMessages([
+      ['system', this.system_message],
+      ['placeholder', '{chat_history}'],
+      ['human', '{input}'],
+      ['placeholder', '{agent_scratchpad}'],
+    ]);
+
+    const tools = [...this.retriverService.getAllRetrievers(), placeholderTool];
 
     // Create the agent
-    const agent = await createOpenAIFunctionsAgent({
+    const agent = createToolCallingAgent({
       llm: this.llm,
-      tools: [placeholderTool],
+      tools: [...tools],
       prompt: prompts,
     });
 
     // Create the executor for the agent
     this.executor = new AgentExecutor({
       agent,
-      tools: [placeholderTool],
+      tools: [...tools],
     });
 
     this.agent_with_chat_history = new RunnableWithMessageHistory({

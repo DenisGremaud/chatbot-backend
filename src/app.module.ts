@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SessionModule } from './session/session.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RetriverModule } from './retriver/retriver.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
     SessionModule,
     UserModule,
     PrismaModule,
+    RetriverModule,
   ],
   controllers: [AppController],
   providers: [AppService],
