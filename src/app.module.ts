@@ -7,6 +7,7 @@ import { SessionModule } from './session/session.module';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RetriverModule } from './retriver/retriver.module';
+import { ChartToolsModule } from './chart-tools/chart-tools.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { RetriverModule } from './retriver/retriver.module';
     UserModule,
     PrismaModule,
     RetriverModule,
+    ChartToolsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,12 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
-import { DynamicTool } from '@langchain/core/tools';
 import { RunnableWithMessageHistory } from '@langchain/core/runnables';
 import { SessionManagerService } from 'src/session/session-manager/session-manager.service';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { RetriverService } from 'src/retriver/retriver.service';
-
+import { ChartToolsService } from 'src/chart-tools/chart-tools.service';
 @Injectable()
 export class ChatService {
   private llm: ChatOpenAI;
@@ -17,6 +16,7 @@ export class ChatService {
   constructor(
     private readonly sessionManager: SessionManagerService,
     private readonly retriverService: RetriverService,
+    private readonly chatToolsService: ChartToolsService, // Add ChartToolsService to the constructor
   ) {
     this.system_message = process.env.SYSTEM_MESSAGE ?? '';
     this.llm = new ChatOpenAI({
@@ -30,14 +30,6 @@ export class ChatService {
 
   private async initializeAgent() {
     await this.retriverService._initializeRetrievers();
-    // Define a simple placeholder tool
-    const placeholderTool = new DynamicTool({
-      name: 'placeholder_tool',
-      description: 'A placeholder tool that echoes the input.',
-      func: async (input: string) => {
-        return `You used the placeholder tool with input: ${input}`;
-      },
-    });
 
     // chatbot prompt template
     const prompts: ChatPromptTemplate = ChatPromptTemplate.fromMessages([
@@ -47,7 +39,13 @@ export class ChatService {
       ['placeholder', '{agent_scratchpad}'],
     ]);
 
-    const tools = [placeholderTool, ...this.retriverService.getAllRetrievers()];
+    const tools = [...this.retriverService.getAllRetrievers()]; // Add all tools from ChartToolsService
+
+    this.chatToolsService.getAllTools().forEach((tool) => {
+      tools.push(tool);
+    });
+
+    console.log('tools:', tools);
 
     // Create the agent
     const agent = createToolCallingAgent({
