@@ -33,6 +33,7 @@
     "chromadb-default-embed": "^2.13.2",
     "dotenv": "^16.4.5",
     "langchain": "^0.3.6",
+    "langsmith": "^0.2.11",
     "openai": "^4.73.0",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.0",

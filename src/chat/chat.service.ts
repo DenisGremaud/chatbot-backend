@@ -47,19 +47,20 @@ export class ChatService {
       ['placeholder', '{agent_scratchpad}'],
     ]);
 
-    const tools = [...this.retriverService.getAllRetrievers(), placeholderTool];
+    const tools = [placeholderTool, ...this.retriverService.getAllRetrievers()];
 
     // Create the agent
     const agent = createToolCallingAgent({
       llm: this.llm,
-      tools: [...tools],
+      tools: tools,
       prompt: prompts,
     });
 
     // Create the executor for the agent
     this.executor = new AgentExecutor({
       agent,
-      tools: [...tools],
+      tools: tools,
+      returnIntermediateSteps: true,
     });
 
     this.agent_with_chat_history = new RunnableWithMessageHistory({

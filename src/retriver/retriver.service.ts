@@ -9,10 +9,13 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 export class RetriverService {
   private retrivers: Map<string, DynamicStructuredTool>;
   private openaiEmbeddings: OpenAIEmbeddings;
+  private chromaHost: string;
 
   constructor(private readonly prismaService: PrismaService) {
     this.retrivers = new Map<string, DynamicStructuredTool>();
     this.openaiEmbeddings = new OpenAIEmbeddings();
+    this.chromaHost =
+      process.env.CHROMADB_HOST ?? 'http://chroma.railway.internal:8000';
   }
 
   // Initialize retrievers from the posgres database
@@ -21,8 +24,14 @@ export class RetriverService {
     for (const retriever of retrieversConfig) {
       const retriver = new Chroma(this.openaiEmbeddings, {
         collectionName: retriever.collectionName,
-        url: `http://${retriever.host}:${retriever.port}`,
-      }).asRetriever({ k: retriever.searchK });
+        url: `${this.chromaHost}`,
+      }).asRetriever({
+        k: retriever.searchK,
+        verbose: true,
+        searchKwargs: {
+          fetchK: retriever.searchK,
+        },
+      });
       const tool = createRetrieverTool(retriver, {
         name: retriever.collectionName,
         description: retriever.description,
