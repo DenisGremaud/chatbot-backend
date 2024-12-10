@@ -105,9 +105,13 @@ export class ChartToolsService {
             },
             responsive: true,
             scales: {
-              y: {
-                beginAtZero: is_start_zero,
-              },
+              yAxes: [
+                {
+                  ticks: {
+                    beginAtZero: is_start_zero,
+                  },
+                },
+              ],
             },
           },
         };
@@ -117,6 +121,7 @@ export class ChartToolsService {
     });
   }
 
+  // Tool for creating bar graphs
   createBarGraph(): DynamicStructuredTool {
     return new DynamicStructuredTool({
       name: 'create_bar_graph',
@@ -178,9 +183,13 @@ export class ChartToolsService {
             },
             responsive: true,
             scales: {
-              y: {
-                beginAtZero: is_start_zero,
-              },
+              yAxes: [
+                {
+                  ticks: {
+                    beginAtZero: is_start_zero,
+                  },
+                },
+              ],
             },
           },
         };
@@ -195,15 +204,23 @@ export class ChartToolsService {
   createPieGraph(): DynamicStructuredTool {
     return new DynamicStructuredTool({
       name: 'create_pie_graph',
-      description: 'Creates a pie chart using the QuickChart API.',
+      description: 'Creates a customizable pie chart using the QuickChart API.',
       schema: z.object({
         labels: z
           .array(z.string())
-          .describe('Labels for each segment of the pie chart'),
+          .describe(
+            'Labels for each segment of the pie chart, representing the categories or names associated with each slice.',
+          ),
         sizes: z
           .array(z.number())
-          .describe('Sizes for each segment of the pie chart'),
-        title: z.string().describe('The title of the graph'),
+          .describe(
+            'Numerical values for each segment of the pie chart, determining the size of each slice relative to the others.',
+          ),
+        title: z
+          .string()
+          .describe(
+            'The main title of the pie chart, displayed prominently above the graph to provide context or summarize the data being visualized.',
+          ),
       }),
       func: async ({ labels, sizes, title }) => {
         const chartConfig = {
@@ -214,8 +231,18 @@ export class ChartToolsService {
               {
                 data: sizes,
                 backgroundColor: labels.map(
-                  (_, index) => `rgba(${index * 50}, 99, 132, 0.2)`,
+                  (_, index) =>
+                    `rgba(${(index * 50) % 255}, ${(index * 100) % 255}, ${
+                      (index * 150) % 255
+                    }, 0.5)`, // Dynamically generate distinct colors
                 ),
+                borderColor: labels.map(
+                  (_, index) =>
+                    `rgba(${(index * 50) % 255}, ${(index * 100) % 255}, ${
+                      (index * 150) % 255
+                    }, 1)`, // Matching solid border colors
+                ),
+                borderWidth: 1, // Border thickness for better definition
               },
             ],
           },
@@ -228,17 +255,19 @@ export class ChartToolsService {
           },
         };
 
+        // Generate and return the chart URL using the QuickChart API
         return this.generateChartUrl(chartConfig);
       },
     });
   }
 
   // Retrieve all tools
-  getAllTools(): DynamicStructuredTool[] {
+  getAllTools(): Array<DynamicStructuredTool | DynamicTool> {
     return [
       this.createLineGraph(),
       this.createBarGraph(),
       this.createPieGraph(),
+      this.getCurrentDateTool(),
     ];
   }
 }

@@ -6,6 +6,7 @@ import { SessionManagerService } from 'src/session/session-manager/session-manag
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { RetriverService } from 'src/retriver/retriver.service';
 import { ChartToolsService } from 'src/chart-tools/chart-tools.service';
+import { DynamicStructuredTool, DynamicTool } from 'langchain/tools';
 @Injectable()
 export class ChatService {
   private llm: ChatOpenAI;
@@ -39,15 +40,15 @@ export class ChatService {
       ['placeholder', '{agent_scratchpad}'],
     ]);
 
-    const tools: any = [...this.retriverService.getAllRetrievers()]; // Add all tools from ChartToolsService
+    const tools: Array<DynamicStructuredTool | DynamicTool> = [];
+
+    this.retriverService.getAllRetrievers().forEach((retriever) => {
+      tools.push(retriever);
+    });
 
     this.chatToolsService.getAllTools().forEach((tool) => {
       tools.push(tool);
     });
-
-    tools.push(this.chatToolsService.getCurrentDateTool());
-
-    console.log('tools:', tools);
 
     // Create the agent
     const agent = createToolCallingAgent({
