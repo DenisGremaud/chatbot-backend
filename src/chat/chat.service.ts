@@ -39,11 +39,13 @@ export class ChatService {
       ['placeholder', '{agent_scratchpad}'],
     ]);
 
-    const tools = [...this.retriverService.getAllRetrievers()]; // Add all tools from ChartToolsService
+    const tools: any = [...this.retriverService.getAllRetrievers()]; // Add all tools from ChartToolsService
 
     this.chatToolsService.getAllTools().forEach((tool) => {
       tools.push(tool);
     });
+
+    tools.push(this.chatToolsService.getCurrentDateTool());
 
     console.log('tools:', tools);
 
