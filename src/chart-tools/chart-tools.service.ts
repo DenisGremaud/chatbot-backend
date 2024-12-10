@@ -59,25 +59,16 @@ export class ChartToolsService {
       name: 'create_line_graph',
       description: 'Creates a line graph using the QuickChart API.',
       schema: z.object({
-        labels: z.array(z.string()).describe('Labels for the x-axis'),
+        labels: z.array(z.string()).describe('Labels for each data set'),
         data: z
           .array(z.array(z.number()))
           .describe('Data series for the line graph'),
         title: z.string().describe('The title of the graph'),
-        x_label: z.string().describe('The label for the x-axis'),
-        y_label: z.string().describe('The label for the y-axis'),
         is_start_zero: z
           .boolean()
-          .describe('Whether the y-axis should start at zero'),
+          .describe('Whether the graph should start at zero'),
       }),
-      func: async ({
-        labels,
-        data,
-        title,
-        x_label,
-        y_label,
-        is_start_zero,
-      }) => {
+      func: async ({ labels, data, title, is_start_zero }) => {
         const chartConfig = {
           type: 'line',
           data: {
@@ -91,6 +82,10 @@ export class ChartToolsService {
             })),
           },
           options: {
+            title: {
+              display: true,
+              text: title,
+            },
             responsive: true,
             scales: {
               y: {
@@ -117,27 +112,17 @@ export class ChartToolsService {
       name: 'create_bar_graph',
       description: 'Creates a bar graph using the QuickChart API.',
       schema: z.object({
-        categories: z.array(z.string()).describe('Categories for the x-axis'),
+        categories: z.array(z.string()).describe('Categories foreach category'),
         values: z
           .array(z.array(z.number()))
           .describe('Values for each category'),
         labels: z.array(z.string()).describe('Labels for each dataset'),
         title: z.string().describe('The title of the graph'),
-        x_label: z.string().describe('The label for the x-axis'),
-        y_label: z.string().describe('The label for the y-axis'),
         is_start_zero: z
           .boolean()
-          .describe('Whether the y-axis should start at zero'),
+          .describe('Whether the graph should start at zero'),
       }),
-      func: async ({
-        categories,
-        values,
-        labels,
-        title,
-        x_label,
-        y_label,
-        is_start_zero,
-      }) => {
+      func: async ({ categories, values, labels, title, is_start_zero }) => {
         const chartConfig = {
           type: 'bar',
           data: {
@@ -151,6 +136,10 @@ export class ChartToolsService {
             })),
           },
           options: {
+            title: {
+              display: true,
+              text: title,
+            },
             responsive: true,
             scales: {
               y: {
@@ -201,11 +190,9 @@ export class ChartToolsService {
           },
           options: {
             responsive: true,
-            plugins: {
-              title: {
-                display: true,
-                text: title,
-              },
+            title: {
+              display: true,
+              text: title,
             },
           },
         };
