@@ -83,7 +83,7 @@ export class ChartToolsService {
           data: {
             labels,
             datasets: data.map((series, index) => ({
-              label: `Series ${index + 1}`,
+              label: labels[index],
               data: series,
               borderColor: `rgba(${index * 50}, 99, 132, 1)`,
               backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
