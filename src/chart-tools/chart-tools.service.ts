@@ -59,26 +59,43 @@ export class ChartToolsService {
       name: 'create_line_graph',
       description: 'Creates a line graph using the QuickChart API.',
       schema: z.object({
-        labels: z.array(z.string()).describe('Labels for each data set'),
+        labels: z
+          .array(z.string())
+          .describe(
+            'Names or categories representing each data point along the X-axis, helping to identify and differentiate the data displayed on the graph.',
+          ),
         data: z
           .array(z.array(z.number()))
-          .describe('Data series for the line graph'),
-        title: z.string().describe('The title of the graph'),
+          .describe(
+            'A collection of numerical datasets, where each inner array represents a data series to be plotted on the graph. Each series corresponds to the respective X-axis labels.',
+          ),
+        datasetLabels: z
+          .array(z.string())
+          .describe(
+            'Labels for each dataset in the chart legend, identifying the corresponding data series.',
+          ),
+        title: z
+          .string()
+          .describe(
+            'The main title of the graph, displayed prominently above it to provide context or summarize the data being visualized.',
+          ),
         is_start_zero: z
           .boolean()
-          .describe('Whether the graph should start at zero'),
+          .describe(
+            'A flag indicating whether the Y-axis should start from zero, regardless of the data range. Useful for standardizing the visual comparison of datasets.',
+          ),
       }),
-      func: async ({ labels, data, title, is_start_zero }) => {
+      func: async ({ labels, data, datasetLabels, title, is_start_zero }) => {
         const chartConfig = {
           type: 'line',
           data: {
             labels,
             datasets: data.map((series, index) => ({
-              label: labels[index],
+              label: datasetLabels[index] || `Dataset ${index + 1}`, // Use provided label or fallback
               data: series,
-              borderColor: `rgba(${index * 50}, 99, 132, 1)`,
-              backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
-              fill: false,
+              borderColor: `rgba(${index * 50}, 99, 132, 1)`, // Dynamic color based on index
+              backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`, // Semi-transparent fill
+              fill: false, // No background fill for line charts
             })),
           },
           options: {
@@ -90,12 +107,6 @@ export class ChartToolsService {
             scales: {
               y: {
                 beginAtZero: is_start_zero,
-              },
-            },
-            plugins: {
-              title: {
-                display: true,
-                text: title,
               },
             },
           },
@@ -116,7 +127,11 @@ export class ChartToolsService {
         values: z
           .array(z.array(z.number()))
           .describe('Values for each category'),
-        labels: z.array(z.string()).describe('Labels for each dataset'),
+        labels: z
+          .array(z.string())
+          .describe(
+            'Categories or names representing each bar along the X-axis, used to identify and distinguish the data being visualized in the graph.',
+          ),
         title: z.string().describe('The title of the graph'),
         is_start_zero: z
           .boolean()
@@ -144,12 +159,6 @@ export class ChartToolsService {
             scales: {
               y: {
                 beginAtZero: is_start_zero,
-              },
-            },
-            plugins: {
-              title: {
-                display: true,
-                text: title,
               },
             },
           },
