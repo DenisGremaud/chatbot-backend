@@ -117,37 +117,58 @@ export class ChartToolsService {
     });
   }
 
-  // Tool for creating bar graphs
   createBarGraph(): DynamicStructuredTool {
     return new DynamicStructuredTool({
       name: 'create_bar_graph',
-      description: 'Creates a bar graph using the QuickChart API.',
+      description: 'Creates a customizable bar graph using the QuickChart API.',
       schema: z.object({
-        categories: z.array(z.string()).describe('Categories foreach category'),
-        values: z
-          .array(z.array(z.number()))
-          .describe('Values for each category'),
-        labels: z
+        categories: z
           .array(z.string())
           .describe(
-            'Categories or names representing each bar along the X-axis, used to identify and distinguish the data being visualized in the graph.',
+            'Names or categories representing each bar along the X-axis, used to identify and distinguish the data being visualized in the graph.',
           ),
-        title: z.string().describe('The title of the graph'),
+        values: z
+          .array(z.array(z.number()))
+          .describe(
+            'A collection of numerical datasets, where each inner array represents a data series to be plotted as bars. Each series corresponds to the respective X-axis categories.',
+          ),
+        datasetLabels: z
+          .array(z.string())
+          .describe(
+            'Labels for each dataset in the chart legend, identifying the corresponding data series.',
+          ),
+        title: z
+          .string()
+          .describe(
+            'The main title of the graph, displayed prominently above it to provide context or summarize the data being visualized.',
+          ),
         is_start_zero: z
           .boolean()
-          .describe('Whether the graph should start at zero'),
+          .describe(
+            'A flag indicating whether the Y-axis should start from zero, regardless of the data range. Useful for standardizing the visual comparison of datasets.',
+          ),
       }),
-      func: async ({ categories, values, labels, title, is_start_zero }) => {
+      func: async ({
+        categories,
+        values,
+        datasetLabels,
+        title,
+        is_start_zero,
+      }) => {
         const chartConfig = {
           type: 'bar',
           data: {
             labels: categories,
             datasets: values.map((series, index) => ({
-              label: labels[index],
+              label: datasetLabels[index] || `Dataset ${index + 1}`, // Use provided label or fallback
               data: series,
-              backgroundColor: `rgba(${index * 50}, 99, 132, 0.2)`,
-              borderColor: `rgba(${index * 50}, 99, 132, 1)`,
-              borderWidth: 1,
+              backgroundColor: `rgba(${index * 50 + 50}, ${99 + index * 20}, ${
+                132 - index * 30
+              }, 0.5)`, // Dynamic semi-transparent color
+              borderColor: `rgba(${index * 50 + 50}, ${99 + index * 20}, ${
+                132 - index * 30
+              }, 1)`, // Dynamic border color
+              borderWidth: 1, // Consistent border width
             })),
           },
           options: {
@@ -164,6 +185,7 @@ export class ChartToolsService {
           },
         };
 
+        // Generate and return the chart URL using the QuickChart API
         return this.generateChartUrl(chartConfig);
       },
     });
